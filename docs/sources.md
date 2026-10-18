@@ -53,5 +53,9 @@ Radiodex opens one connection to the station and passes the audio to Windows' pl
 - Content types such as `audio/aacp` (AAC+, common on Icecast-KH servers) are served as `audio/aac`,
   which Windows' player recognises. Played directly, those streams stay on "connecting".
 - Servers that allow one listener per IP keep working, since there is only one connection.
+- The relay keeps the last ~15 seconds of audio. A player that connects first gets that backlog at once
+  (aligned to a frame start), so it starts quickly and plays a few seconds behind live with a cushion that
+  absorbs network and server hiccups. Before starting, Radiodex waits for ~4 s of audio (at most ~3 s).
+- Audio is never dropped for a player that is reading; dropped bytes are heard as stutter.
 - A short server drop is bridged by reconnecting underneath the player.
 - HLS (`.m3u8`) and very old SHOUTcast v1 servers (`ICY 200 OK`) are played directly by Windows instead.

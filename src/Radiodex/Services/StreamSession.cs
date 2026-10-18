@@ -65,6 +65,16 @@ public sealed class StreamSession : IDisposable
     private volatile bool _switchRequested;
     private volatile bool _unreadable;
 
+    // Recent audio, so a player that connects gets a few seconds at once instead of starting empty.
+    // That cushion is what keeps playback smooth when the station's server or the network hiccups.
+    private readonly LinkedList<byte[]> _backlog = new();
+    private long _backlogBytes;
+    private volatile int _bytesPerSecond = 16000;   // 128 kbps until the station says otherwise
+
+    private const double BacklogSeconds = 15;
+    private const double PrebufferSeconds = 4;
+    private const int MaxQueuedChunksPerClient = 4000;
+
     public event Action<string>? TitleChanged;
     public event Action<string>? RecordingFailed;
     /// <summary>The station stopped answering (after a few quick retries). Time to look for a new link.</summary>
@@ -112,7 +122,25 @@ public sealed class StreamSession : IDisposable
     {
         var t = _ready.Task;
         var done = await Task.WhenAny(t, Task.Delay(timeout)).ConfigureAwait(false);
-        return done == t && t.Result;
+        if (done != t || !t.Result) return false;
+
+        // Collect a few seconds before starting the player (many servers send a burst right away,
+        // so this is usually instant). Never wait more than ~3 s after the first audio.
+        var deadline = DateTime.UtcNow + TimeSpan.FromSeconds(3);
+        while (DateTime.UtcNow < deadline && !_cts.IsCancellationRequested)
+        {
+            long have;
+            lock (_lock) have = _backlogBytes;
+            if (have >= _bytesPerSecond * PrebufferSeconds) break;
+            await Task.Delay(100).ConfigureAwait(false);
+        }
+        return true;
+    }
+
+    /// <summary>Seconds of audio held for a player that (re)connects.</summary>
+    public double BufferedSeconds
+    {
+        get { lock (_lock) return _backlogBytes / (double)Math.Max(1, _bytesPerSecond); }
     }
 
     /// <summary>Moves to a new stream link (after auto-repair). A running recording continues in the same file.</summary>
@@ -120,6 +148,11 @@ public sealed class StreamSession : IDisposable
     {
         _url = url;
         _ready = NewReady();
+        lock (_lock)
+        {
+            _backlog.Clear();
+            _backlogBytes = 0;
+        }
         _failures = 0;
         _downReported = false;
         IsHls = false;
@@ -212,6 +245,8 @@ public sealed class StreamSession : IDisposable
 
         var metaInt = 0;
         if (resp.Headers.TryGetValues("icy-metaint", out var vals)) int.TryParse(vals.FirstOrDefault(), out metaInt);
+        var kbps = ReadBitrate(resp);
+        if (kbps > 0) _bytesPerSecond = kbps * 125;
         SupportsMetadata = metaInt > 0;
 
         using var stream = await resp.Content.ReadAsStreamAsync(ct).ConfigureAwait(false);
@@ -257,6 +292,23 @@ public sealed class StreamSession : IDisposable
         }
     }
 
+    /// <summary>The station's bitrate from "icy-br" or "ice-audio-info" (kbps), 0 if unknown.</summary>
+    private static int ReadBitrate(HttpResponseMessage resp)
+    {
+        string? H(string name) =>
+            resp.Headers.TryGetValues(name, out var v) ? v.FirstOrDefault() :
+            resp.Content.Headers.TryGetValues(name, out var v2) ? v2.FirstOrDefault() : null;
+
+        if (int.TryParse(H("icy-br")?.Split(',')[0].Trim(), out var br) && br is > 0 and < 2000) return br;
+        var info = H("ice-audio-info");
+        if (info != null)
+        {
+            var m = Regex.Match(info, @"(?:ice-)?bitrate=(\d+)", RegexOptions.IgnoreCase);
+            if (m.Success && int.TryParse(m.Groups[1].Value, out br) && br is > 0 and < 2000) return br;
+        }
+        return 0;
+    }
+
     private void Touch() => Interlocked.Exchange(ref _lastDataTicks, DateTime.UtcNow.Ticks);
 
     private void CheckStall()
@@ -281,7 +333,23 @@ public sealed class StreamSession : IDisposable
 
         lock (_lock)
         {
-            foreach (var c in _clients) c.Writer.TryWrite(chunk);
+            _backlog.AddLast(chunk);
+            _backlogBytes += count;
+            var limit = (long)Math.Clamp(_bytesPerSecond * BacklogSeconds, 64 * 1024, 2 * 1024 * 1024);
+            while (_backlogBytes > limit && _backlog.First != null)
+            {
+                _backlogBytes -= _backlog.First.Value.Length;
+                _backlog.RemoveFirst();
+            }
+
+            // Never drop audio for a player that is reading: dropped bytes are heard as stutter.
+            // Only a player that stopped reading altogether (huge queue) is let go.
+            for (var i = _clients.Count - 1; i >= 0; i--)
+            {
+                var c = _clients[i];
+                if (c.Reader.Count > MaxQueuedChunksPerClient) { c.Writer.TryComplete(); _clients.RemoveAt(i); }
+                else c.Writer.TryWrite(chunk);
+            }
 
             if (_recording != null)
             {
@@ -347,11 +415,7 @@ public sealed class StreamSession : IDisposable
 
     private async Task ServeAsync(TcpClient client)
     {
-        var channel = Channel.CreateBounded<byte[]>(new BoundedChannelOptions(64)
-        {
-            FullMode = BoundedChannelFullMode.DropOldest,
-            SingleReader = true
-        });
+        var channel = Channel.CreateUnbounded<byte[]>(new UnboundedChannelOptions { SingleReader = true });
         try
         {
             using (client)
@@ -389,7 +453,15 @@ public sealed class StreamSession : IDisposable
                 await net.WriteAsync(hb, _cts.Token).ConfigureAwait(false);
                 if (isHead) return;
 
-                lock (_lock) _clients.Add(channel);
+                // Start with the recent audio (from a frame boundary), then follow live.
+                byte[] head;
+                lock (_lock)
+                {
+                    head = SnapshotBacklog();
+                    _clients.Add(channel);
+                }
+                if (head.Length > 0) await net.WriteAsync(head, _cts.Token).ConfigureAwait(false);
+
                 await foreach (var chunk in channel.Reader.ReadAllAsync(_cts.Token).ConfigureAwait(false))
                     await net.WriteAsync(chunk, _cts.Token).ConfigureAwait(false);
             }
@@ -403,6 +475,48 @@ public sealed class StreamSession : IDisposable
             lock (_lock) _clients.Remove(channel);
             channel.Writer.TryComplete();
         }
+    }
+
+    /// <summary>The held audio as one block, starting at the first whole frame. Call under _lock.</summary>
+    private byte[] SnapshotBacklog()
+    {
+        if (_backlogBytes == 0) return Array.Empty<byte>();
+        var all = new byte[_backlogBytes];
+        var pos = 0;
+        foreach (var c in _backlog)
+        {
+            Buffer.BlockCopy(c, 0, all, pos, c.Length);
+            pos += c.Length;
+        }
+        var start = FindFrameStart(all, LocalExtension);
+        return start == 0 ? all : all.AsSpan(start).ToArray();
+    }
+
+    /// <summary>First MP3 / AAC (ADTS) frame start, or an Ogg page; 0 when unknown.</summary>
+    private static int FindFrameStart(byte[] b, string ext)
+    {
+        var limit = Math.Min(b.Length - 4, 64 * 1024);
+        for (var i = 0; i < limit; i++)
+        {
+            if (ext == "ogg")
+            {
+                if (b[i] == (byte)'O' && b[i + 1] == (byte)'g' && b[i + 2] == (byte)'g' && b[i + 3] == (byte)'S') return i;
+                continue;
+            }
+            if (b[i] != 0xFF) continue;
+            var b1 = b[i + 1];
+            if (ext == "aac")
+            {
+                if ((b1 & 0xF6) == 0xF0) return i;
+                continue;
+            }
+            if ((b1 & 0xE0) != 0xE0) continue;
+            var version = (b1 >> 3) & 3; var layer = (b1 >> 1) & 3;
+            var bitrate = b[i + 2] >> 4; var rate = (b[i + 2] >> 2) & 3;
+            if (version == 1 || layer == 0 || bitrate == 0 || bitrate == 15 || rate == 3) continue;
+            return i;
+        }
+        return 0;
     }
 
     // ---------------- recording ----------------
