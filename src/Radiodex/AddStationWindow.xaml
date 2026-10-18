@@ -1,0 +1,93 @@
+<Window x:Class="Radiodex.AddStationWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:s="clr-namespace:Radiodex.Services"
+        Title="{Binding Source={x:Static s:Loc.I}, Path=[AddTitle]}"
+        Width="600" Height="660" MinWidth="480" MinHeight="460"
+        WindowStartupLocation="CenterOwner" ShowInTaskbar="False" ResizeMode="CanResize"
+        Background="{StaticResource Panel}" Foreground="{StaticResource Text}" FontFamily="{StaticResource UiFont}"
+        TextOptions.TextFormattingMode="Display" UseLayoutRounding="True">
+
+    <DockPanel Margin="28,22,28,24">
+
+        <Border DockPanel.Dock="Top" Background="{StaticResource Bg}" CornerRadius="10" Padding="4" Margin="0,0,0,18">
+            <UniformGrid Columns="2">
+                <Button x:Name="TabSearch" Style="{StaticResource GhostButton}" MinHeight="40" Height="40" Tag="7" FontWeight="SemiBold" Click="OnTabSearch"
+                        Content="{Binding Source={x:Static s:Loc.I}, Path=[TabSearch]}" />
+                <Button x:Name="TabLink" Style="{StaticResource GhostButton}" MinHeight="40" Height="40" Tag="7" FontWeight="SemiBold" Click="OnTabLink"
+                        Content="{Binding Source={x:Static s:Loc.I}, Path=[TabLink]}" />
+            </UniformGrid>
+        </Border>
+
+        <Grid DockPanel.Dock="Top" Margin="0,0,0,10">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <TextBox x:Name="Query" Style="{StaticResource Field}" KeyDown="OnQueryKeyDown" />
+            <Button x:Name="GoButton" Grid.Column="1" Style="{StaticResource PrimaryButton}" Height="44" Tag="8" Margin="8,0,0,0" Padding="18,0" Click="OnGo" />
+        </Grid>
+
+        <TextBlock x:Name="Info" DockPanel.Dock="Top" FontSize="12" Foreground="{StaticResource Muted}" Margin="2,0,0,12" TextWrapping="Wrap" />
+
+        <!-- Footer for the link tab -->
+        <StackPanel x:Name="LinkFooter" DockPanel.Dock="Bottom" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,14,0,0" Visibility="Collapsed">
+            <CheckBox x:Name="FavCheck" VerticalAlignment="Center" Foreground="{StaticResource Text}" Margin="0,0,18,0"
+                      Content="{Binding Source={x:Static s:Loc.I}, Path=[AddToFavorites]}" />
+            <Button Style="{StaticResource BaseButton}" Height="44" Tag="8" Click="OnCancel" Content="{Binding Source={x:Static s:Loc.I}, Path=[Cancel]}" />
+            <Button x:Name="SaveButton" Style="{StaticResource PrimaryButton}" Height="44" Tag="8" Margin="10,0,0,0" Padding="20,0" IsEnabled="False" Click="OnSaveLink"
+                    Content="{Binding Source={x:Static s:Loc.I}, Path=[SaveAndPlay]}" />
+        </StackPanel>
+
+        <Grid>
+            <!-- Search results -->
+            <ListBox x:Name="Results" Style="{StaticResource PlainList}">
+                <ListBox.ItemTemplate>
+                    <DataTemplate>
+                        <Border Background="{StaticResource Panel2}" CornerRadius="10" Padding="10,8" Margin="0,0,0,6">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="44" />
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <Border Width="44" Height="44" CornerRadius="9" Background="#2B3140" ClipToBounds="True">
+                                    <Image Source="{Binding Candidate.LogoUrl, TargetNullValue={x:Null}}" Stretch="UniformToFill" />
+                                </Border>
+                                <StackPanel Grid.Column="1" Margin="12,0,8,0" VerticalAlignment="Center">
+                                    <TextBlock Text="{Binding Candidate.Name}" FontSize="14" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                                    <TextBlock Text="{Binding Candidate.Details}" FontSize="12" Foreground="{StaticResource Muted}" TextTrimming="CharacterEllipsis" Margin="0,2,0,0" />
+                                </StackPanel>
+                                <Button Grid.Column="2" Style="{StaticResource GhostButton}" MinHeight="36" Height="36" Padding="10,0" Tag="18" Margin="0,0,6,0" Click="OnPreview"
+                                        ToolTip="{Binding Source={x:Static s:Loc.I}, Path=[Play]}" AutomationProperties.Name="{Binding Source={x:Static s:Loc.I}, Path=[Play]}">
+                                    <Path Data="{StaticResource IcoPlay}" Fill="{StaticResource Text2}" Width="14" Height="14" Stretch="Uniform" />
+                                </Button>
+                                <Button Grid.Column="3" Style="{StaticResource BaseButton}" MinHeight="36" Height="36" Tag="18" FontSize="13" FontWeight="SemiBold"
+                                        Content="{Binding ButtonText}" IsEnabled="{Binding CanAdd}" Click="OnAddResult" />
+                            </Grid>
+                        </Border>
+                    </DataTemplate>
+                </ListBox.ItemTemplate>
+            </ListBox>
+
+            <!-- Resolved link preview -->
+            <Border x:Name="Preview" BorderBrush="{StaticResource Border}" BorderThickness="1" CornerRadius="12" Padding="16" VerticalAlignment="Top" Visibility="Collapsed">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="76" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <Border Width="76" Height="76" CornerRadius="12" Background="#2B3140" ClipToBounds="True">
+                        <Image x:Name="PreviewLogo" Stretch="UniformToFill" />
+                    </Border>
+                    <StackPanel Grid.Column="1" Margin="16,0,0,0" VerticalAlignment="Center">
+                        <TextBlock x:Name="PreviewName" FontSize="17" FontWeight="Bold" TextTrimming="CharacterEllipsis" />
+                        <TextBlock x:Name="PreviewDetails" FontSize="13" Foreground="{StaticResource Muted}" Margin="0,2,0,0" />
+                        <TextBlock x:Name="PreviewUrl" FontSize="12" FontFamily="{StaticResource MonoFont}" Foreground="{StaticResource Text2}" TextTrimming="CharacterEllipsis" Margin="0,6,0,0" />
+                    </StackPanel>
+                </Grid>
+            </Border>
+        </Grid>
+    </DockPanel>
+</Window>

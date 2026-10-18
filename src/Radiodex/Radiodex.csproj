@@ -1,0 +1,27 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows10.0.19041.0</TargetFramework>
+    <SupportedOSPlatformVersion>10.0.19041.0</SupportedOSPlatformVersion>
+    <UseWPF>true</UseWPF>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <LangVersion>latest</LangVersion>
+    <RootNamespace>Radiodex</RootNamespace>
+    <AssemblyName>Radiodex</AssemblyName>
+    <ApplicationIcon>Assets\radiodex.ico</ApplicationIcon>
+    <Version>0.1.0</Version>
+    <Product>Radiodex</Product>
+    <Company>Radiodex</Company>
+    <Description>Internet radio player for Windows with auto-healing stream links and song-marked recordings.</Description>
+    <Copyright>MIT License</Copyright>
+    <EnableWindowsTargeting>true</EnableWindowsTargeting>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Resource Include="Assets\radiodex.ico" />
+    <Resource Include="Assets\radiodex.png" />
+  </ItemGroup>
+
+</Project>

@@ -1,0 +1,41 @@
+name: Build and release
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Publish single-file exe
+        run: >
+          dotnet publish src/Radiodex/Radiodex.csproj -c Release -r win-x64
+          --self-contained true
+          -p:PublishSingleFile=true
+          -p:IncludeNativeLibrariesForSelfExtract=true
+          -p:EnableCompressionInSingleFile=true
+          -p:DebugType=none
+          -p:Version=0.1.${{ github.run_number }}
+          -o out
+
+      - name: Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v0.1.${{ github.run_number }}
+          name: Radiodex 0.1.${{ github.run_number }}
+          body: |
+            Download **Radiodex.exe** below and run it. No installer, .NET is included.
+            Windows 10 (2004+) or Windows 11, 64-bit.
+          files: out/Radiodex.exe
+          make_latest: true
