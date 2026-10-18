@@ -86,6 +86,8 @@ public sealed class StreamSession : IDisposable
 
     public bool IsRecording { get { lock (_lock) return _recording != null; } }
 
+    public string? CurrentRecordingPath { get { lock (_lock) return _recording?.AudioPath; } }
+
     public TimeSpan RecordingElapsed { get { lock (_lock) return _recording?.Elapsed ?? TimeSpan.Zero; } }
 
     public StreamSession(string url, string stationName)

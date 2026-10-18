@@ -55,6 +55,8 @@ To uninstall, delete the folders `%LocalAppData%\Programs\Radiodex` and `%AppDat
 - Saves the stream exactly as it arrives (no re-encoding) to `Music\Radiodex`.
 - Writes a `.cue` sheet next to each recording with every song and the second it started: players like VLC and foobar2000 show it as a track list.
 - If the link changes mid-recording, the recording continues in the same file.
+- **Recordings** screen: a timeline of the songs, listen from any song, adjust sync if the titles came early or late,
+  like songs, and **split into separate files** per song (no quality loss, MP3s get title/artist tags).
 
 **Languages:** English and Português, switchable live.
 
@@ -62,7 +64,6 @@ To uninstall, delete the folders `%LocalAppData%\Programs\Radiodex` and `%AppDat
 
 - [ ] Tray icon (keep playing when the window is closed) and Windows notifications
 - [ ] Mini player (small, always on top)
-- [ ] Recording screen: song timeline, sync adjust, split into separate tracks
 - [ ] Settings: start with Windows, recordings folder, source order
 - [ ] macOS version (native SwiftUI, same data format)
 

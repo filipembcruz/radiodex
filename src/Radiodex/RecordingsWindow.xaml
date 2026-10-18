@@ -1,0 +1,172 @@
+<Window x:Class="Radiodex.RecordingsWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:s="clr-namespace:Radiodex.Services"
+        Title="{Binding Source={x:Static s:Loc.I}, Path=[Recordings]}"
+        Width="1180" Height="780" MinWidth="900" MinHeight="560"
+        WindowStartupLocation="CenterOwner" ShowInTaskbar="False"
+        Background="{StaticResource Bg}" Foreground="{StaticResource Text}" FontFamily="{StaticResource UiFont}"
+        TextOptions.TextFormattingMode="Display" UseLayoutRounding="True">
+
+    <Window.Resources>
+        <BooleanToVisibilityConverter x:Key="BoolToVis" />
+    </Window.Resources>
+
+    <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="300" />
+            <ColumnDefinition Width="*" />
+        </Grid.ColumnDefinitions>
+
+        <!-- Recording list -->
+        <Border Background="{StaticResource Sidebar}" BorderBrush="{StaticResource BorderSoft}" BorderThickness="0,0,1,0">
+            <DockPanel Margin="16,20,16,16">
+                <Grid DockPanel.Dock="Top" Margin="2,0,0,14">
+                    <TextBlock Text="{Binding Source={x:Static s:Loc.I}, Path=[Recordings]}" FontSize="18" FontWeight="Bold" VerticalAlignment="Center" />
+                    <Button Style="{StaticResource GhostButton}" HorizontalAlignment="Right" MinHeight="30" Height="30" Padding="8,0" Tag="6" FontSize="12"
+                            Foreground="{StaticResource Accent}" Click="OnOpenFolder" Content="{Binding Source={x:Static s:Loc.I}, Path=[OpenFolder]}" />
+                </Grid>
+                <TextBlock x:Name="NoRecordings" DockPanel.Dock="Top" Text="{Binding Source={x:Static s:Loc.I}, Path=[NoRecordings]}" FontSize="13"
+                           Foreground="{StaticResource Muted}" TextWrapping="Wrap" Margin="2,0,0,0" Visibility="Collapsed" />
+                <ListBox x:Name="FileList" Style="{StaticResource PlainList}" ItemContainerStyle="{StaticResource StationItem}" SelectionChanged="OnFileSelected" PreviewMouseRightButtonDown="OnFileRightClick">
+                    <ListBox.ContextMenu>
+                        <ContextMenu>
+                            <MenuItem Header="{Binding Source={x:Static s:Loc.I}, Path=[DeleteRecording]}" Click="OnDeleteRecording" />
+                        </ContextMenu>
+                    </ListBox.ContextMenu>
+                    <ListBox.ItemTemplate>
+                        <DataTemplate>
+                            <StackPanel>
+                                <TextBlock Text="{Binding Station}" FontSize="14" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                                <TextBlock Text="{Binding Details}" FontSize="12" Foreground="{StaticResource Muted}" Margin="0,2,0,0" />
+                            </StackPanel>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+            </DockPanel>
+        </Border>
+
+        <!-- Detail -->
+        <TextBlock x:Name="PickHint" Grid.Column="1" Text="{Binding Source={x:Static s:Loc.I}, Path=[PickRecording]}" FontSize="15" Foreground="{StaticResource Muted}"
+                   HorizontalAlignment="Center" VerticalAlignment="Center" />
+
+        <DockPanel x:Name="Detail" Grid.Column="1" Margin="32,24,32,20" Visibility="Collapsed">
+
+            <StackPanel DockPanel.Dock="Top">
+                <TextBlock x:Name="FileTitle" FontSize="20" FontWeight="Bold" TextTrimming="CharacterEllipsis" />
+                <TextBlock x:Name="FileDetails" FontSize="13" Foreground="{StaticResource Muted}" Margin="0,2,0,0" />
+            </StackPanel>
+
+            <!-- Player + timeline -->
+            <Border DockPanel.Dock="Top" Style="{StaticResource Card}" Margin="0,16,0,0">
+                <StackPanel>
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <Button x:Name="PlayButton" Style="{StaticResource PrimaryButton}" Width="52" Height="52" Padding="0" Tag="26" Click="OnPlayPause">
+                            <Path x:Name="PlayIcon" Data="{StaticResource IcoPlay}" Fill="{StaticResource OnAccent}" Width="20" Height="20" Stretch="Uniform" />
+                        </Button>
+                        <StackPanel Grid.Column="1" Margin="16,0,0,0" VerticalAlignment="Center">
+                            <TextBlock Text="{Binding Source={x:Static s:Loc.I}, Path=[ThisPart]}" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource Muted}" />
+                            <TextBlock x:Name="CurrentTrack" FontSize="17" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                        </StackPanel>
+                        <TextBlock x:Name="TimeText" Grid.Column="2" FontSize="15" Foreground="{StaticResource Text2}" VerticalAlignment="Center" />
+                    </Grid>
+
+                    <Grid x:Name="TimelineHost" Margin="0,14,0,0" Height="44" MouseLeftButtonDown="OnTimelineClick" Background="Transparent" Cursor="Hand">
+                        <Grid x:Name="Timeline" Height="38" VerticalAlignment="Bottom" />
+                        <Canvas IsHitTestVisible="False">
+                            <Rectangle x:Name="Playhead" Width="2" Height="44" Fill="{StaticResource Text}" RadiusX="1" RadiusY="1" />
+                        </Canvas>
+                    </Grid>
+
+                    <Grid Margin="0,12,0,0">
+                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                            <Border Width="12" Height="12" CornerRadius="3" Background="#C98A2E" />
+                            <TextBlock Text="{Binding Source={x:Static s:Loc.I}, Path=[LegendSong]}" FontSize="12" Foreground="{StaticResource Muted}" Margin="6,0,18,0" />
+                            <Border Width="12" Height="12" CornerRadius="3" Background="#3A4150" />
+                            <TextBlock Text="{Binding Source={x:Static s:Loc.I}, Path=[LegendTalk]}" FontSize="12" Foreground="{StaticResource Muted}" Margin="6,0,0,0" />
+                        </StackPanel>
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                            <TextBlock Text="{Binding Source={x:Static s:Loc.I}, Path=[SyncAdjust]}" FontSize="13" Foreground="{StaticResource Text2}" VerticalAlignment="Center" Margin="0,0,10,0"
+                                       ToolTip="{Binding Source={x:Static s:Loc.I}, Path=[SyncHint]}" />
+                            <Border BorderBrush="{StaticResource Border}" BorderThickness="1" CornerRadius="8">
+                                <StackPanel Orientation="Horizontal">
+                                    <Button Style="{StaticResource GhostButton}" Foreground="{StaticResource Text}" Width="40" Height="34" MinHeight="34" Padding="0" Tag="7" FontSize="16" Content="−" Click="OnSyncDown"
+                                            AutomationProperties.Name="-1 s" />
+                                    <TextBlock x:Name="SyncText" Width="56" TextAlignment="Center" VerticalAlignment="Center" FontSize="13" />
+                                    <Button Style="{StaticResource GhostButton}" Foreground="{StaticResource Text}" Width="40" Height="34" MinHeight="34" Padding="0" Tag="7" FontSize="16" Content="+" Click="OnSyncUp"
+                                            AutomationProperties.Name="+1 s" />
+                                </StackPanel>
+                            </Border>
+                        </StackPanel>
+                    </Grid>
+                </StackPanel>
+            </Border>
+
+            <!-- Footer -->
+            <Grid DockPanel.Dock="Bottom" Margin="0,14,0,0">
+                <TextBlock x:Name="FooterInfo" FontSize="12" Foreground="{StaticResource Muted}" VerticalAlignment="Center" TextWrapping="Wrap" Margin="0,0,320,0" />
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                    <Button x:Name="SplitButton" Style="{StaticResource PrimaryButton}" Height="44" Tag="8" Padding="18,0" Click="OnSplit" />
+                </StackPanel>
+            </Grid>
+
+            <!-- Track list -->
+            <Grid DockPanel.Dock="Top" Margin="12,18,12,6">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="70" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="70" />
+                    <ColumnDefinition Width="120" />
+                    <ColumnDefinition Width="44" />
+                    <ColumnDefinition Width="86" />
+                </Grid.ColumnDefinitions>
+                <TextBlock Text="{Binding Source={x:Static s:Loc.I}, Path=[ColStart]}" Style="{StaticResource SectionLabel}" />
+                <TextBlock Grid.Column="1" Text="{Binding Source={x:Static s:Loc.I}, Path=[ColSong]}" Style="{StaticResource SectionLabel}" />
+                <TextBlock Grid.Column="2" Text="{Binding Source={x:Static s:Loc.I}, Path=[ColLength]}" Style="{StaticResource SectionLabel}" />
+                <TextBlock Grid.Column="5" Text="{Binding Source={x:Static s:Loc.I}, Path=[ColCut]}" Style="{StaticResource SectionLabel}" />
+            </Grid>
+            <TextBlock x:Name="NoMarks" DockPanel.Dock="Top" Text="{Binding Source={x:Static s:Loc.I}, Path=[NoMarks]}" FontSize="13" Foreground="{StaticResource Muted}"
+                       Margin="12,4,0,0" TextWrapping="Wrap" Visibility="Collapsed" />
+
+            <ListBox x:Name="TrackList" Style="{StaticResource PlainList}">
+                <ListBox.ItemTemplate>
+                    <DataTemplate>
+                        <Border Background="{Binding RowBrush}" CornerRadius="8" Padding="12,2" Margin="0,0,0,2" MinHeight="46">
+                            <Grid VerticalAlignment="Center">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="70" />
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="70" />
+                                    <ColumnDefinition Width="120" />
+                                    <ColumnDefinition Width="44" />
+                                    <ColumnDefinition Width="86" />
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Text="{Binding StartLabel}" FontSize="14" Foreground="{StaticResource Text2}" VerticalAlignment="Center" />
+                                <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,10,0">
+                                    <TextBlock Text="{Binding Title}" FontSize="14" FontWeight="{Binding TitleWeight}" Foreground="{Binding TitleBrush}" TextTrimming="CharacterEllipsis" />
+                                    <TextBlock Text="{Binding Artist}" FontSize="13" Foreground="{StaticResource Muted}" Margin="10,0,0,0" TextTrimming="CharacterEllipsis" />
+                                </StackPanel>
+                                <TextBlock Grid.Column="2" Text="{Binding LengthLabel}" FontSize="13" Foreground="{StaticResource Muted}" VerticalAlignment="Center" />
+                                <Button Grid.Column="3" Style="{StaticResource BaseButton}" MinHeight="34" Height="34" Padding="10,0" Tag="17" FontSize="12" HorizontalAlignment="Left"
+                                        Click="OnListenFrom" Content="{Binding Source={x:Static s:Loc.I}, Path=[ListenFrom]}" />
+                                <Button Grid.Column="4" Style="{StaticResource GhostButton}" Width="38" Height="38" MinHeight="38" Padding="0" Tag="19" Click="OnLikeTrack"
+                                        Visibility="{Binding IsSong, Converter={StaticResource BoolToVis}}"
+                                        ToolTip="{Binding Source={x:Static s:Loc.I}, Path=[LikeSong]}" AutomationProperties.Name="{Binding Source={x:Static s:Loc.I}, Path=[LikeSong]}">
+                                    <Path Data="{StaticResource IcoHeart}" Fill="{Binding HeartFill}" Stroke="{Binding HeartStroke}" StrokeThickness="1.8" Width="17" Height="17" Stretch="Uniform" />
+                                </Button>
+                                <CheckBox Grid.Column="5" IsChecked="{Binding Cut}" VerticalAlignment="Center" Foreground="{StaticResource Text2}"
+                                          Visibility="{Binding IsSong, Converter={StaticResource BoolToVis}}"
+                                          Content="{Binding Source={x:Static s:Loc.I}, Path=[TrackWord]}" />
+                            </Grid>
+                        </Border>
+                    </DataTemplate>
+                </ListBox.ItemTemplate>
+            </ListBox>
+        </DockPanel>
+    </Grid>
+</Window>

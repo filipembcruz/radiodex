@@ -55,6 +55,8 @@ Para desinstalar, apague as pastas `%LocalAppData%\Programs\Radiodex` e `%AppDat
 - Salva o stream exatamente como chega (sem recodificar) em `Música\Radiodex`.
 - Cria um arquivo `.cue` ao lado de cada gravação com cada música e o segundo em que começou: players como VLC e foobar2000 mostram como lista de faixas.
 - Se o link mudar no meio da gravação, ela continua no mesmo arquivo.
+- Tela de **Gravações**: linha do tempo das músicas, ouvir a partir de qualquer música, ajustar a sincronia se o nome
+  chegou antes ou depois, favoritar músicas e **cortar em arquivos separados** por música (sem perder qualidade; MP3 sai com título e artista).
 
 **Idiomas:** inglês e português, troca na hora.
 
@@ -62,7 +64,6 @@ Para desinstalar, apague as pastas `%LocalAppData%\Programs\Radiodex` e `%AppDat
 
 - [ ] Ícone na bandeja (continua tocando com a janela fechada) e notificações do Windows
 - [ ] Mini player (pequeno, sempre no topo)
-- [ ] Tela da gravação: linha do tempo das músicas, ajuste de sincronia, cortar em faixas
 - [ ] Configurações: iniciar com o Windows, pasta das gravações, ordem das fontes
 - [ ] Versão para macOS (nativa em SwiftUI, mesmo formato de dados)
 

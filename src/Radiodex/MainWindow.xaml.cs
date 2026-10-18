@@ -33,6 +33,7 @@ public partial class MainWindow : Window
     private Station? _current;
     private StreamSession? _session;
     private bool _preparing;
+    private string? _lastRecordingPath;
     private bool _favOnly;
     private bool _wantPlaying;
     private string? _songTitle;
@@ -363,7 +364,11 @@ public partial class MainWindow : Window
     private void StopRecordingIfAny()
     {
         var path = _session?.StopRecording();
-        if (path != null) LastRecording.Text = Loc.F("RecordSaved", Path.GetFileName(path));
+        if (path != null)
+        {
+            _lastRecordingPath = path;
+            LastRecording.Text = Loc.F("RecordSaved", Path.GetFileName(path));
+        }
         UpdateRecButton();
     }
 
@@ -483,6 +488,23 @@ public partial class MainWindow : Window
         var logo = s.LogoUrl;
         s.LogoUrl = null;
         s.LogoUrl = logo;
+    }
+
+    private void OnViewRecordings(object sender, RoutedEventArgs e)
+    {
+        var dlg = new RecordingsWindow(_settings.RecordingsFolder, _liked, () => Storage.SaveLikedSongs(_liked),
+            beforePlay: () =>
+            {
+                if (_player.State is PlayState.Playing or PlayState.Connecting)
+                {
+                    _wantPlaying = false;
+                    _pendingHeal = false;
+                    _player.Pause();
+                }
+            },
+            select: _lastRecordingPath, recordingNow: _session?.IsRecording == true ? _session.CurrentRecordingPath : null) { Owner = this };
+        dlg.ShowDialog();
+        UpdateSong();
     }
 
     private void OnLikedSongs(object sender, RoutedEventArgs e)
